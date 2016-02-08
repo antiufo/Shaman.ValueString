@@ -1,0 +1,49 @@
+{
+  "version": "1.0.2.9",
+  "compilationOptions": {
+    "keyFile": "ShamanOpenSourceKey.snk",
+    "allowUnsafe": true
+  },
+  "authors": [
+    "Andrea Martinelli"
+  ],
+  "description": "Provides an almost drop-in replacement for String, with allocation-free substring/split methods, along with a ToStringCached() extension method that can be used on StringBuilders, ValueStrings and so on.",
+  "iconUrl": "http://shaman.io/images/shaman-nuget-icon.png",
+  "projectUrl": "http://shaman.io/",
+  "title": "ValueString",
+  "tags": [
+    "string",
+    "gc-free",
+    "gc",
+    "optimization",
+    "allocation",
+    "struct",
+    "performance"
+  ],
+  "summary": "Allocation-free string-like type.",
+  "compile": [],
+  "frameworks": {
+    "net45": {
+      "frameworkAssemblies": {
+        "System.Runtime": "4.0.0.0",
+        "System.Runtime.Extensions": "4.0.0.0",
+        "System.Collections": "4.0.0.0",
+        "System.Diagnostics.Debug": "4.0.0.0",
+        "System.IO": "4.0.0.0",
+        "System.Linq": "4.0.0.0",
+        "System.Text.Encoding": "4.0.0.0",
+        "System.Threading.Tasks": "4.0.0.0"
+      }
+    },
+    "net35": {},
+    "dotnet": {
+      "dependencies": {
+        "System.Runtime": "4.0.21-beta-23302",
+        "System.IO": "4.0.11-beta-23302",
+        "System.Threading.Tasks": "4.0.11-beta-23302",
+        "System.Text.Encoding": "4.0.11-beta-23302",
+        "System.Linq": "4.0.1-beta-23225"
+      }
+    }
+  }
+}
