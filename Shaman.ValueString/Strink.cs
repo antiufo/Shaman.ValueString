@@ -89,7 +89,11 @@ namespace Shaman.Runtime
                 var length = idx != -1 ? idx - pos : str.Length - pos;
                 if (!removeEmpty || length != 0)
                 {
+#if PROJJSONBUILD
+                    arr[index] = str.Substring(pos, length);
+#else
                     arr[index] = str.SubstringCached(pos, length);
+#endif
                     index++;
                 }
                 pos = idx + 1;
@@ -201,6 +205,134 @@ namespace Shaman.Runtime
         }
 
 
+
+        public static int ParseInt32(ValueString str)
+        {
+            return Convert.ToInt32(ParseInt64(str));
+        }
+        public static uint ParseUInt32(ValueString str)
+        {
+            return Convert.ToUInt32(ParseUInt64(str));
+        }
+
+        public static bool TryParseUInt32(ValueString str, out uint value)
+        {
+            value = 0;
+            ulong val;
+            if (!TryParseUInt64(str, out val))
+            {
+                return false;
+            }
+            if (val > uint.MaxValue) return false;
+            value = (uint)val;
+            return true;
+        }
+        public static bool TryParseInt32(ValueString str, out int value)
+        {
+            value = 0;
+            long val;
+            if (!TryParseInt64(str, out val))
+            {
+                return false;
+            }
+            if (val > int.MaxValue || val < int.MinValue) return false;
+            value = (int)val;
+            return true;
+        }
+
+        public static long ParseInt64(ValueString str)
+        {
+            long val;
+            if (!TryParseInt64(str, out val)) throw new FormatException();
+            return val;
+        }
+
+        public static bool TryParseInt64(ValueString str, out long value)
+        {
+            value = 0;
+            if (str.Length == 0) return false;
+            if (str[0] == '-')
+            {
+                ulong k;
+                if (!TryParseUInt64(str.Substring(1), out k)) return false;
+                if (k == 9223372036854775808 /* -long.MinValue */)
+                {
+                    value = long.MinValue;
+                    return true;
+                }
+                if (k > long.MaxValue) return false;
+                value = -(long)k;
+                return true;
+            }
+            else
+            {
+                ulong k;
+                if (!TryParseUInt64(str, out k)) return false;
+                if (k > long.MaxValue) return false;
+                value = (long)k;
+                return true;
+            }
+        }
+
+        public static ulong ParseUInt64(ValueString str)
+        {
+            ulong val;
+            if (!TryParseUInt64(str, out val)) throw new FormatException();
+            return val;
+        }
+
+        public static bool TryParseUInt64(ValueString str, out ulong value)
+        {
+            // Precondition replacement
+            if (str.Length < 1)
+            {
+                value = 0;
+                return false;
+            }
+
+            value = 0;
+            var bytesConsumed = 0;
+
+
+            for (int byteIndex = 0; byteIndex < str.Length; byteIndex++)
+            {
+                byte nextByteVal = (byte)((byte)str[byteIndex] - '0');
+                if (nextByteVal > 9)
+                {
+                    if (bytesConsumed == 0)
+                    {
+                        value = default(ulong);
+                        return false;
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+                else if (value > UInt64.MaxValue / 10) // overflow
+                {
+                    value = 0;
+                    bytesConsumed = 0;
+                    return false;
+                }
+                else if (UInt64.MaxValue - value * 10 < (ulong)(nextByteVal)) // overflow
+                {
+                    value = 0;
+                    bytesConsumed = 0;
+                    return false;
+                }
+                ulong candidate = value * 10 + nextByteVal;
+
+                value = candidate;
+                bytesConsumed++;
+            }
+
+            return true;
+        }
+
+
+
+
         internal static unsafe void CharCopy(char* dest, char* src, int count)
         {
             // Same rules as for memcpy, but with the premise that 
@@ -290,6 +422,8 @@ namespace Shaman.Runtime
         public static Func<int, string> AllocateString;
         public static CopyCharsDelegate CopyChars;
         public static CopyStringBuilderCharsDelegate CopyStringBuilderChars;
+        public static Func<StringBuilder, bool> ShouldKeepReleasedStringBuilder = x => true;
+
 
         public unsafe delegate void CopyStringBuilderCharsDelegate(char* destination, StringBuilder sb, int length);
         public unsafe delegate void CopyCharsDelegate(char* dest, char* src, int count);
@@ -494,14 +628,41 @@ namespace Shaman.Runtime
                 return _string[_start + index];
             }
         }
-
+        
+        public int IndexOf(char ch)
+        {
+            return IndexOf(ch, 0, _length);
+        }
+        
         public int IndexOf(char ch, int start)
         {
+            return IndexOf(ch, start, _length - start);
+        }
+
+        public int IndexOf(char ch, int start, int count)
+        {
             if (_string == null) return -1;
-            var r = ImplOffsetToPublicOffset(_string.IndexOf(ch, _start + start, _length - start));
-            AssertEqual(r, ToClrString().IndexOf(ch, start));
+            var r = ImplOffsetToPublicOffset(_string.IndexOf(ch, _start + start, count));
+            AssertEqual(r, ToClrString().IndexOf(ch, start, count));
             return r;
         }
+        
+        public int LastIndexOf(char ch)
+        {
+            return LastIndexOf(ch, _length - 1, _length);
+        }
+        public int LastIndexOf(char ch, int start)
+        {
+            return LastIndexOf(ch, start, start + 1);
+        }
+        public int LastIndexOf(char ch, int start, int count)
+        {
+            if (_string == null) return -1;
+            var r = ImplOffsetToPublicOffset(_string.LastIndexOf(ch, _start + start, count));
+            AssertEqual(r, ToClrString().LastIndexOf(ch, start, count));
+            return r;
+        }
+        
 
         public int IndexOf(ValueString str)
         {
@@ -553,6 +714,13 @@ namespace Shaman.Runtime
 
         public ValueString[] Split(char ch, StringSplitOptions options)
         {
+            ValueString[] result = null;
+            Split(ch, options, ref result);
+            return result;
+        }
+
+        public void Split(char ch, StringSplitOptions options, ref ValueString[] arr)
+        {
             var removeEmpty = (options & StringSplitOptions.RemoveEmptyEntries) != 0;
             var count = 0;
             if (removeEmpty)
@@ -583,8 +751,8 @@ namespace Shaman.Runtime
                     }
                 }
             }
-            if (count == 0) return EmptyStringArray;
-            var arr = new ValueString[count];
+            if (count == 0){ arr = EmptyStringArray; return; }
+            if (arr == null || arr.Length != count) arr = new ValueString[count];
             var index = 0;
             var pos = 0;
             while (index < count)
@@ -599,7 +767,6 @@ namespace Shaman.Runtime
                 }
                 pos = idx + 1;
             }
-            return arr;
         }
 
         private readonly static ValueString[] EmptyStringArray = new ValueString[0];
@@ -751,6 +918,7 @@ namespace Shaman.Runtime
             }
 
         }
+        
 
         public static string GetValueAndRelease(StringBuilder sb)
         {
@@ -768,7 +936,7 @@ namespace Shaman.Runtime
         public static void Release(StringBuilder sb)
         {
             var u = _unusedStringBuilders;
-            if (u != null && u.Count < 4)
+            if (u != null && u.Count < 4 && ValueString.ShouldKeepReleasedStringBuilder(sb))
             {
                 sb.Length = 0;
                 u.Add(sb);
@@ -777,7 +945,7 @@ namespace Shaman.Runtime
         public static void Release(ReseekableStringBuilder sb)
         {
             var u = _unusedReseekableStringBuilders;
-            if (u != null && u.Count < 4)
+            if (u != null && u.Count < 4 && ValueString.ShouldKeepReleasedStringBuilder(sb._sb))
             {
                 sb._start = 0;
                 sb._sb.Length = 0;
