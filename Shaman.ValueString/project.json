@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2.19",
+  "version": "1.0.2.21",
   "buildOptions": {
     "keyFile": "ShamanOpenSourceKey.snk",
     "allowUnsafe": true,

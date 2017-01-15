@@ -811,9 +811,10 @@ namespace Shaman.Runtime
             else
             {
                 result = true;
+                var offset = _start + (this._length - str._length);
                 for (int i = str._length - 1; i >= 0; i--)
                 {
-                    if (_string[_start + i] != str._string[str._start + i])
+                    if (_string[offset + i] != str._string[str._start + i])
                     {
                         result = false;
                         break;
