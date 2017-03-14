@@ -4,3 +4,5 @@ obj
 *.user
 *.xproj
 project.lock.json
+/Shaman.ValueString/System/Slices/SpanExtensionsTemplate.cs
+/Shaman.ValueString/System/Slices/SpanExtensionsTemplate.cs
