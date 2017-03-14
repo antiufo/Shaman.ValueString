@@ -116,6 +116,11 @@ namespace Shaman.Runtime
             return mv.Concatenate(valueStrings);
         }
 
+        public void ReplaceBuilder(MultiValueStringBuilder builder)
+        {
+            this.mv = builder;
+        }
+
         public int Peek()
         {
             if (_stream == null)
