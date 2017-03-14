@@ -34,9 +34,11 @@ namespace Shaman.Runtime
 			{
 				while (index >= this.readChars)
 				{
+					if (finished) throw new EndOfStreamException();
 					int num = this.reader.Read();
 					if (num == -1)
 					{
+						finished = true;
 						throw new EndOfStreamException();
 					}
 					this.AppendChar((char)num);
@@ -69,6 +71,7 @@ namespace Shaman.Runtime
 			{
 				return false;
 			}
+			if (finished) return false;
 			this.encoding = encoding;
 			this.stoppable.Stop();
 			while (true)
@@ -95,7 +98,7 @@ namespace Shaman.Runtime
 				int num = this.reader.Read();
 				if (num == -1)
 				{
-					this.finished = false;
+					this.finished = true;
 					return false;
 				}
 				this.AppendChar((char)num);
