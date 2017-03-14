@@ -43,12 +43,30 @@ namespace Shaman.Runtime
             return CreateValueString(sb, 0, sb.Length);
         }
 
-        public void EnsureSpace(int length)
+        public unsafe void EnsureSpace(int length)
         {
             if (used + length > str.Length)
             {
-                str = ValueString.AllocateString(Math.Max(length, blockSize));
-                used = 0;
+                int newSize;
+                checked
+                {
+                    var minimumNewSize = length + used;
+                    do
+                    {
+                        newSize = used * 2;
+                    }
+                    while (newSize < minimumNewSize);
+                }
+
+                var newStr = ValueString.AllocateString(newSize);
+
+                fixed (char* dest = newStr)
+                fixed (char* source = str)
+                {
+                    Buffer.MemoryCopy((void*)source, dest, newStr.Length * 2, used * 2);
+                }
+
+                str = newStr;
             }
         }
 
@@ -158,6 +176,8 @@ namespace Shaman.Runtime
 
         public unsafe ValueString CreateValueString(ValueString vs)
         {
+            EnsureSpace(vs._length);
+
             fixed (char* dest = str)
             {
                 var destx = dest + used;
@@ -171,6 +191,8 @@ namespace Shaman.Runtime
                     Buffer.MemoryCopy((void*)(source + vs._start), destx, vs._length * 2, vs._length * 2);
 #endif
                 }
+
+                used += vs._length;
 
                 return new ValueString(str, offset, vs._length);
             }
