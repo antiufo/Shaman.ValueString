@@ -158,6 +158,8 @@ namespace Shaman.Runtime
 
         public unsafe ValueString CreateValueString(ValueString vs)
         {
+            EnsureSpace(vs._length);
+
             fixed (char* dest = str)
             {
                 var destx = dest + used;
@@ -171,7 +173,7 @@ namespace Shaman.Runtime
                     Buffer.MemoryCopy((void*)(source + vs._start), destx, vs._length * 2, vs._length * 2);
 #endif
                 }
-
+                used += vs._length;
                 return new ValueString(str, offset, vs._length);
             }
         }
