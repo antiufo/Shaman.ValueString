@@ -455,6 +455,31 @@ namespace Shaman.Runtime
 
         }
 
+        public int GetLowerCaseHashCode()
+        {
+            int hash1 = (5381 << 16) + 5381;
+
+            int hash2 = hash1;
+
+
+            var len = _length;
+
+            var s = _start;
+            while (len >= 2)
+            {
+                hash1 = ((hash1 << 5) + hash1 + (hash1 >> 27)) ^ char.ToLower(_string[s]);
+                s++;
+                hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ char.ToLower(_string[s]);
+                s++;
+                len -= 2;
+            }
+            if (len != 0)
+                hash2 = ((hash2 << 5) + hash2 + (hash2 >> 27)) ^ char.ToLower(_string[s]);
+
+            return hash1 + (hash2 * 1566083941);
+
+        }
+
 
         public unsafe static ValueString Concat(params ValueString[] args)
         {
