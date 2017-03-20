@@ -121,9 +121,12 @@ namespace Shaman.Runtime
         }
         public ValueString(string str, int start, int length)
         {
-            Debug.Assert(start >= 0);
-            Debug.Assert(length >= 0);
-            Debug.Assert(start + length <= str.Length);
+            if (start < 0)
+                throw new ArgumentOutOfRangeException("start must be >= 0");
+            if (length < 0)
+                throw new ArgumentOutOfRangeException("length must be >= 0");
+            if (start + length > str.Length)
+                throw new ArgumentOutOfRangeException("unmatching str length");
             this._string = str;
             this._start = start;
             this._length = length;
