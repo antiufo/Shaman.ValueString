@@ -14,6 +14,8 @@ namespace Shaman.Runtime
 {
     public class MultiValueStringBuilder
     {
+        public ValueString Value => new ValueString(str, 0, used);
+
         public MultiValueStringBuilder(int blockSize)
         {
             this.blockSize = blockSize;
@@ -163,15 +165,21 @@ namespace Shaman.Runtime
 
         public unsafe ValueString Concatenate(ValueString vs1, ValueString vs2)
         {
-            if (object.ReferenceEquals(vs1._string, vs2._string) && vs1._start + vs1._length == vs2._start)
-            {
-                return new ValueString(vs1._string, vs1._start, vs1._length + vs2._length);
-            }
             EnsureSpace(vs1.Length + vs2.Length);
             var m = used;
             CreateValueString(vs1);
             CreateValueString(vs2);
             return new ValueString(str, m, vs1._length + vs2._length);
+        }
+
+        public unsafe ValueString Concatenate(ValueString vs1, ValueString vs2, ValueString vs3)
+        {
+            EnsureSpace(vs1.Length + vs2.Length + vs3.Length);
+            var m = used;
+            CreateValueString(vs1);
+            CreateValueString(vs2);
+            CreateValueString(vs3);
+            return new ValueString(str, m, vs1._length + vs2._length + vs3._length);
         }
 
         public unsafe ValueString CreateValueString(ValueString vs)
